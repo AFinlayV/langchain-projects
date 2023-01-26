@@ -61,16 +61,24 @@ def conversation_loop(agent):
 
 
 def save_chat_history(agent, filename='chat_history.txt'):
+    if VERBOSE:
+        print(f"Saving chat history as {filename}...")
     with open(filename, 'w') as f:
         for line in agent.memory:
             f.write(str(line).strip() + '\n')
+    if VERBOSE:
+        print("Chat history saved.")
 
 
 def load_chat_history(agent, filename='chat_history.txt'):
+    if VERBOSE:
+        print(f"Loading chat history from {filename}...")
     try:
         data = {}
         with open(filename, 'r') as f:
             for line in f.read().splitlines():
+                if VERBOSE:
+                    print(line)
                 line = eval(line)
                 key, value = line
                 data[key] = value
