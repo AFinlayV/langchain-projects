@@ -1,6 +1,0 @@
-('human_prefix', 'Human')
-('ai_prefix', 'AI')
-('buffer', "\nHuman: Hello, my name is alex\nAI: Hi Alex, nice to meet you! What can I do for you today?\nHuman: what's my name?\nAI: Your name is Alex. Is there anything else I can help you with?")
-('output_key', None)
-('input_key', None)
-('memory_key', 'chat_history')
