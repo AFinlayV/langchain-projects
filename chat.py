@@ -92,7 +92,7 @@ def main():
     agent = init_agent()
     clear_chat_history = input("Clear chat history? (y/n): ")
     if clear_chat_history == 'y' or clear_chat_history == 'Y':
-        agent.memory = ConversationBufferMemory(memory_key="chat_history")
+        agent.memory.clear()
     else:
         load_chat_history(agent)
     conversation_loop(agent)
