@@ -3,6 +3,7 @@ from langchain.chains.conversation.memory import ConversationBufferMemory
 from langchain.agents import load_tools
 from langchain.agents import initialize_agent
 import os
+import streamlit as st
 
 VERBOSE = False
 
@@ -53,9 +54,9 @@ def init_agent():
 
 def conversation_loop(agent):
     while True:
-        text = input("You: ")
+        text = st.text_input("You: ")
         if text:
-            print("Bot:", agent.run(input=text))
+            st.write("Bot:", agent.run(input=text))
         else:
             break
 
@@ -82,7 +83,7 @@ def load_chat_history(agent, filename='chat_history.txt'):
                 line = eval(line)
                 key, value = line
                 data[key] = value
-        agent.memory = ConversationBufferMemory(memory_key="chat_history", buffer=data['buffer'])
+        agent.memory.buffer = data['buffer']
     except FileNotFoundError:
         print("No chat history found.")
 
@@ -90,11 +91,11 @@ def load_chat_history(agent, filename='chat_history.txt'):
 def main():
     set_api_keys()
     agent = init_agent()
-    clear_chat_history = input("Clear chat history? (y/n): ")
+    """clear_chat_history = st.text_input("Clear chat history? (y/n): ")
     if clear_chat_history == 'y' or clear_chat_history == 'Y':
         agent.memory.clear()
-    else:
-        load_chat_history(agent)
+    else:"""
+    load_chat_history(agent)
     conversation_loop(agent)
     save_chat_history(agent)
 
