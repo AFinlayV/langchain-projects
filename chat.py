@@ -60,6 +60,8 @@ def init_memory():
 
 
 def init_agent(tools, llm, memory):
+    if VERBOSE:
+        print("Initializing agent...")
     agent = initialize_agent(
         tools,
         llm,
@@ -108,11 +110,15 @@ def main():
     set_api_keys()
     agent = init_all()
     load_chat_history(agent)
+    print('Welcome to the chatbot! Type <clear> to clear the chat history.')
     while True:
         text = input('Human: ')
         if text:
-            print(conversation(agent, text))
-            save_chat_history(agent)
+            if text == '<clear>':
+                agent.memory.clear()
+            else:
+                print(conversation(agent, text))
+                save_chat_history(agent)
         else:
             break
 
