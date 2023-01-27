@@ -3,7 +3,6 @@ from langchain.chains.conversation.memory import ConversationBufferMemory
 from langchain.agents import load_tools
 from langchain.agents import initialize_agent
 import os
-import streamlit as st
 
 VERBOSE = False
 
@@ -23,23 +22,44 @@ def set_api_keys():
     os.environ['WOLFRAM_ALPHA_APPID'] = key
 
 
-def init_agent():
+def init_all():
+    llm = init_llm()
+    tools = init_tools(llm)
+    memory = init_memory()
+    agent = init_agent(tools, llm, memory)
+    return agent
+
+
+def init_llm(temperature=0.7):
     if VERBOSE:
         print("Loading LLM...")
-    llm = OpenAI(temperature=0.7)
+    llm = OpenAI(temperature=temperature)
     if VERBOSE:
         print("LLM loaded.", llm)
+    return llm
+
+
+def init_tools(llm):
+    if VERBOSE:
         print("Loading tools...")
     tool_list = ["serpapi", "llm-math", 'wolfram-alpha']
     tools = load_tools(tool_list, llm=llm)
     if VERBOSE:
         print("Tools loaded.")
         print("Tool list:", tool_list)
+    return tools
+
+
+def init_memory():
+    if VERBOSE:
         print("Initializing memory...")
     memory = ConversationBufferMemory(memory_key="chat_history")
     if VERBOSE:
         print("Memory initialized.", memory)
-        print("Initializing agent...")
+    return memory
+
+
+def init_agent(tools, llm, memory):
     agent = initialize_agent(
         tools,
         llm,
@@ -52,13 +72,9 @@ def init_agent():
     return agent
 
 
-def conversation_loop(agent):
-    while True:
-        text = st.text_input("You: ")
-        if text:
-            st.write("Bot:", agent.run(input=text))
-        else:
-            break
+def conversation(agent, text):
+    response = f'AI: {agent.run(input=text)}'
+    return response
 
 
 def save_chat_history(agent, filename='chat_history.txt'):
@@ -90,14 +106,15 @@ def load_chat_history(agent, filename='chat_history.txt'):
 
 def main():
     set_api_keys()
-    agent = init_agent()
-    """clear_chat_history = st.text_input("Clear chat history? (y/n): ")
-    if clear_chat_history == 'y' or clear_chat_history == 'Y':
-        agent.memory.clear()
-    else:"""
+    agent = init_all()
     load_chat_history(agent)
-    conversation_loop(agent)
-    save_chat_history(agent)
+    while True:
+        text = input('Human: ')
+        if text:
+            print(conversation(agent, text))
+            save_chat_history(agent)
+        else:
+            break
 
 
 if __name__ == '__main__':
