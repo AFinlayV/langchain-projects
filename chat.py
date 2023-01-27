@@ -75,7 +75,10 @@ def init_agent(tools, llm, memory):
 
 
 def conversation(agent, text):
-    response = f'AI: {agent.run(input=text)}'
+    try:
+        response = f'AI: {agent.run(input=text)}'
+    except Exception as e:
+        response = f'<Error>: {e}'
     return response
 
 
@@ -103,7 +106,9 @@ def load_chat_history(agent, filename='chat_history.txt'):
                 data[key] = value
         agent.memory.buffer = data['buffer']
     except FileNotFoundError:
-        print("No chat history found.")
+        print("No chat history found. Starting new chat history.")
+    except Exception as e:
+        print(e)
 
 
 def main():
@@ -116,6 +121,7 @@ def main():
         if text:
             if text == '<clear>':
                 agent.memory.clear()
+                print('Chat history cleared.')
             else:
                 print(conversation(agent, text))
                 save_chat_history(agent)
