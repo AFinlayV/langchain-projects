@@ -22,11 +22,11 @@ TODO:
 - [x] Set up answers
 - [x] Set up file saving
 - [x] Set up daily summary
-- [x] Set up weekly summary
-- [x] Set up database
-- [x] Set up embedding
-- [x] Set up semantic search
-- [x] Set up context
+- [ ] Set up weekly summary
+- [ ] Set up database
+- [ ] Set up embedding
+- [ ] Set up semantic search
+- [ ] Set up context
 - [x] Set up question generation
 - [x] Set up answer recording
 """
