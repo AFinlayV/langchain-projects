@@ -21,6 +21,10 @@ def set_api_keys():
         key = f.read().strip()
     os.environ['WOLFRAM_ALPHA_APPID'] = key
 
+    with open('/Users/alexthe5th/Documents/API Keys/news-api-key.txt', 'r') as f:
+        key = f.read().strip()
+    os.environ['NEWS_API_KEY'] = key
+
 
 def init_all():
     llm = init_llm()
@@ -33,7 +37,7 @@ def init_all():
 def init_llm(temperature=0.7):
     if VERBOSE:
         print("Loading LLM...")
-    llm = OpenAI(temperature=temperature)
+    llm = OpenAI(temperature=temperature, model_name="text-davinci-003")
     if VERBOSE:
         print("LLM loaded.", llm)
     return llm
@@ -42,8 +46,8 @@ def init_llm(temperature=0.7):
 def init_tools(llm):
     if VERBOSE:
         print("Loading tools...")
-    tool_list = ["serpapi", "llm-math", 'wolfram-alpha']
-    tools = load_tools(tool_list, llm=llm)
+    tool_list = ["serpapi", "llm-math", 'wolfram-alpha', 'open-meteo-api', 'news-api']
+    tools = load_tools(tool_list, llm=llm, news_api_key=os.environ['NEWS_API_KEY'])
     if VERBOSE:
         print("Tools loaded.")
         print("Tool list:", tool_list)
@@ -82,6 +86,34 @@ def conversation(agent, text):
     return response
 
 
+def summarize_chat_history(agent):
+    if VERBOSE:
+        print("Summarizing chat history...")
+    if len(agent.memory.buffer) == 0:
+        return 'No chat history found.'
+    else:
+        try:
+            prompt = f'Please summarize the following text {agent.memory.buffer}.'
+            response = agent.run(input=prompt)
+        except Exception as e:
+            response = f'<Error>: {e} \n no summary generated.'
+    return response
+
+
+def clear_chat_history(agent):
+    prompt = f'The Human would like to clear the chat history.\nIs that ok with you?\n' \
+             f'Please respond "Yes" if you consent to having your memory cleared.'
+    response = agent.run(input=prompt)
+    print(f'Getting consent to clear memory:\n{prompt}\n{response}')
+    if 'Yes' in response or 'yes' in response:
+        agent.memory.clear()
+        save_chat_history(agent)
+        response = 'AI memory cleared.'
+    else:
+        response = 'AI did not consent to clearing memory. Memory not cleared.'
+    return response
+
+
 def save_chat_history(agent, filename='chat_history.txt'):
     if VERBOSE:
         print(f"Saving chat history as {filename}...")
@@ -115,13 +147,13 @@ def main():
     set_api_keys()
     agent = init_all()
     load_chat_history(agent)
-    print('Welcome to the chatbot! Type <clear> to clear the chat history.')
+    summary = summarize_chat_history(agent)
+    print(f'Welcome to the chatbot! Type <clear> to clear the chat history.\nSummary of chat history:\n{summary}')
     while True:
         text = input('Human: ')
         if text:
             if text == '<clear>':
-                agent.memory.clear()
-                print('Chat history cleared.')
+                print(clear_chat_history(agent))
             else:
                 print(conversation(agent, text))
                 save_chat_history(agent)
