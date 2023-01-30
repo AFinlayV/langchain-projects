@@ -4,7 +4,7 @@ from langchain.agents import load_tools
 from langchain.agents import initialize_agent
 import os
 
-VERBOSE = False
+VERBOSE = True
 
 
 # Set API keys
@@ -37,7 +37,7 @@ def init_all():
 def init_llm(temperature=0.7):
     if VERBOSE:
         print("Loading LLM...")
-    llm = OpenAI(temperature=temperature, model_name="text-davinci-003")
+    llm = OpenAI(temperature=temperature, model_name="text-davinci-003", verbose=VERBOSE, max_tokens=512)
     if VERBOSE:
         print("LLM loaded.", llm)
     return llm
