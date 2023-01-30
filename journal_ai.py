@@ -6,40 +6,31 @@ It can then generate daily and weekly summaries of the user's answers formatted 
 Then the entries can be embedded and semantically searchable in a database.
 Ideally it can then use previous entries as context to generate new questions.
 
+TODO:
+    - [x] Set up OpenAI API
+    - [x] Set up LLM
+    - [x] make topic list
+    - [x] generate questions
+    - [x] Set up answers
+    - [x] file saving
+    - [x] daily summary
+    - [ ] Rewrite to use a langchain agent and generate the questions dynamically, rather than all at once
+    - [ ] Set up weekly summary
+    - [ ] Implement whisper.ai to take in audio and convert to text
 """
+
 from langchain.llms import OpenAI
 from langchain import PromptTemplate
 import os
 import datetime
 
-"""
-TODO:
-
-- [x] Set up OpenAI API
-- [x] Set up LLM
-- [x] Set up topics
-- [x] Set up questions
-- [x] Set up answers
-- [x] Set up file saving
-- [x] Set up daily summary
-- [ ] Set up weekly summary
-- [ ] Set up database
-- [ ] Set up embedding
-- [ ] Set up semantic search
-- [ ] Set up context
-- [x] Set up question generation
-- [x] Set up answer recording
-"""
 VERBOSE = False
+
 TOPIC_LIST = {
     "Reflection": "questions about your day, thoughts, and feelings.",
-    # "Goals": "questions about the goals you want to achieve and how to reach them.",
-    # "Gratitude": "questions about what you are thankful for and why.",
-    # "Growth": "questions about what you have learned and how you can grow.",
-    # "Relationships": "questions about your relationships and how to strengthen them.",
-    # "Habits": "questions about your habits and how to make positive changes.",
-    # "Plans": "questions about your plans and how to prepare for them.",
-    # "Challenges": "questions about the challenges you are facing and how to overcome them."
+    "Goals": "questions about the goals you want to achieve and how to reach them.",
+    "Gratitude": "questions about what you are thankful for and why.",
+    "Relationships": "questions about your relationships and how to strengthen them.",
 }
 
 
@@ -61,7 +52,7 @@ def vprint(*args):
         print(*args)
 
 
-def get_questions(llm, topic, description):
+def get_questions(llm, topic, description, num=3):
     """
     generates questions based on the topic and description given
     :return: list of questions
@@ -78,15 +69,15 @@ def get_questions(llm, topic, description):
     2. What did you do today?
     3. What did you learn today?
     
-    You can generate as many questions as you want, but you should generate at least 3.
+    Generate {num} questions.
     """
 
     prompt = PromptTemplate(
-        input_variables=['topic', 'description'],
+        input_variables=['topic', 'description', 'num'],
         template=template,
     )
     vprint(prompt)
-    response = llm(prompt.format(topic=topic, description=description))
+    response = llm(prompt.format(num=num, topic=topic, description=description))
     for line in response.splitlines():
         if line:
             questions.append(line)
@@ -94,35 +85,71 @@ def get_questions(llm, topic, description):
     return questions
 
 
+def generate_folowup_question(llm, question, answer, num=3):
+    """
+    generates follow-up questions based on the question and answer given
+    :param num: number of questions to generate
+    :param answer: user's answer
+    :param llm: LLM to use
+    :param question: question asked by llm
+    :return: follow-up question
+    """
+    questions = []
+    template = """
+    I want you to generate a set of follow up question based on the question and answer given.
+    Question:
+    {question}
+    Answer:
+    {answer}
+
+    You are going to generate the questions in the following format:
+    1. How did you feel today?
+    2. What did you do today?
+    3. What did you learn today?
+
+    Generate {num} questions.
+    """
+    prompt = PromptTemplate(
+        input_variables=['num', 'question', 'answer'],
+        template=template,
+    )
+    response = llm(prompt.format(num=num, question=question, answer=answer))
+    for line in response.splitlines():
+        if line:
+            questions.append(line)
+    return questions
+
+
 def ask_question(question):
     """
     asks the questions and records the answers
-    :param questions: list of questions
+    :param question: list of questions
     :return: dict of questions and answers
     """
-
     answer = input(f'Question: {question}:\n'
-                   f'Answer:')
+                   f'Answer: ')
     return answer
 
 
 def generate_summary(llm, answer_dict):
     """
     generates a daily summary of the answers
+    :param llm: The LLM to use
     :param answer_dict: dict of questions and answers
     :return: daily summary
     """
     template = """
-    A User was asked questions and they gave the following responses:
+    A User was asked a question and they gave the following response:
     Question:
     {question}
     Answer:
     {answer}
-    Generate a section daily Journal Entry based on the responses.
+    Generate a section daily journal entry based on the responses.
     Do not include an introduction or conclusion, just the portion of the entry that would be a summary of the answer.
     Write the summary as if it is a continuation of a journal entry (i.e don't start with "Today I did ..."). 
     Use the first person and the present tense as if you are the user who has written the responses.
-    Use interesting and descriptive language that will make the entry interesting to read.
+    Use interesting and descriptive language that will make the entry interesting to read,
+    but don't add any extra details to the journal entry, only include details mentioned in the answer.
     Use variety in your sentence structure and vocabulary.
     Correct any spelling or grammar mistakes.
     """
@@ -156,15 +183,18 @@ def main():
     set_api_keys()
     llm = init_llm()
     answer_dict = {}
-    summary = ""
     questions = []
+
     for topic in TOPIC_LIST:
         topic, description = topic, TOPIC_LIST[topic]
         questions += get_questions(llm, topic, TOPIC_LIST[topic])
         vprint(topic, ":", description)
     for question in questions:
         answer_dict[question] = ask_question(question)
-    summary += generate_summary(llm, answer_dict)
+        followups = generate_folowup_question(llm, question, answer_dict[question])
+        for followup in followups:
+            answer_dict[followup] = ask_question(followup)
+    summary = generate_summary(llm, answer_dict)
     print(summary)
     save_journal_entry(answer_dict, summary)
 
